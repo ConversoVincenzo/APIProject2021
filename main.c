@@ -2,20 +2,29 @@
 #include <stdio.h>
 #include <string.h>
 
-#define N 1025
+#define N (sizeof(char )*23)
 
 typedef struct Point{
     int key;
-    int *Vector_Pointer;
-    int d;
+    int *num;
     char color;
     struct Point *father;
     struct Point *dx;
     struct Point *sx;
 }node;
 
+typedef struct temp{
+    int pathLength;
+    int ID;
+    struct temp* next;
+    struct temp* prev;
+}scoreRanking;
+
 node *root;
 node *nil;
+scoreRanking *firstPosition;
+scoreRanking *lastPosition;
+int rankLength = 0;
 
 void left_rotate(node *x){
     node *y;
@@ -53,7 +62,7 @@ void right_rotate(node *x){
     y->dx = x;
     x->father = y;
 }
-void RB_Insert_FIXUP(node *z){
+void RB_Insert_Fixup(node *z){
     node  *x;
     node *y;
     if(z==root){
@@ -67,7 +76,7 @@ void RB_Insert_FIXUP(node *z){
                     x->color = 'B';
                     y->color = 'B';
                     x->father->color = 'R';
-                    RB_Insert_FIXUP(x->father);
+                    RB_Insert_Fixup(x->father);
                 } else {
                     if(z == x->dx){
                         z = x;
@@ -83,7 +92,7 @@ void RB_Insert_FIXUP(node *z){
                     x->color = 'B';
                     y->color = 'B';
                     x->father->color = 'R';
-                    RB_Insert_FIXUP(x->father);
+                    RB_Insert_Fixup(x->father);
                 }else {
                     if(z == x->sx){
                         z= x;
@@ -123,13 +132,13 @@ void RB_Insert(node *z){
     z->sx = nil;
     z->dx = nil;
     z->color = 'R';
-    RB_Insert_FIXUP(z);
+    RB_Insert_Fixup(z);
 }
-void NodeCreate(int key){
+void NodeCreate(int key, int *num){
     node *z;
     z=malloc(sizeof(node));
     z->key = key;
-    z->Vector_Pointer=NULL;
+    z->num = num;
     RB_Insert(z);
 }
 void RB_Delete_Fixup(node *x){
@@ -191,7 +200,7 @@ node *Tree_Min(node *x){
     }
     return x;
 }
-node *Tree_Succ(node *x){
+node *Tree_Next(node *x){
     node  *y;
     if (x->dx != nil){
         return Tree_Min(x->dx);
@@ -209,7 +218,7 @@ node *RB_Delete(node *z){
     if ( z->sx == nil || z->dx == nil){
         y = z;
     } else{
-        y = Tree_Succ(z);
+        y = Tree_Next(z);
     }
     if (y->sx!= nil){
         x = y->sx;
@@ -232,7 +241,7 @@ node *RB_Delete(node *z){
     }
     return y;
 }
-node  *Ricerca(int key){
+node  *Searching(int key){
     node  *x = root;
     while (x != nil && key != x->key){
         if (x->key>key){
@@ -244,9 +253,111 @@ node  *Ricerca(int key){
     return x;
 
 }
-void Insert_Node(int *vet,int ind1,int len){
+void Insert_Node(int *num,int ind1){
     node *x;
-    x=Ricerca(ind1);
+    x = Searching(ind1);
+    x->num = num;
+}
+void add_score(int score,int ID,int k){
+    scoreRanking *s,*r;
+    if(firstPosition == NULL){
+        firstPosition = malloc(sizeof (scoreRanking));
+        firstPosition->ID = ID;
+        firstPosition->pathLength = score;
+        firstPosition->next = NULL;
+        firstPosition->prev = NULL;
+        lastPosition = firstPosition;
+        rankLength++;
+        return;
+    } else if (firstPosition->pathLength<score){
+        s = firstPosition;
+        firstPosition = malloc(sizeof (scoreRanking));
+        firstPosition->ID = ID;
+        firstPosition->pathLength = score;
+        firstPosition->next = s;
+        firstPosition->prev = NULL;
+        s->prev = firstPosition;
+        if(rankLength == k){
+            r = lastPosition->prev;
+            r->next = NULL;
+            free(lastPosition);
+            lastPosition = r;
+        } else
+            rankLength++;
+    } else if(lastPosition->pathLength >= score){
+        if(k==rankLength){
+            return;
+        } else{
+            s=lastPosition;
+            s->next= malloc(sizeof(scoreRanking));
+            s->next->ID = ID;
+            s->next->pathLength = score;
+            s->next->next = NULL;
+            s->next->prev = lastPosition;
+            lastPosition = s;
+            rankLength++;
+            return;
+        }
+    } else {
+        s = firstPosition;
+        while (s->next != NULL) {
+            if (s->next->pathLength < score) {
+                r = s->next;
+                s->next = malloc(sizeof(scoreRanking));
+                s->next->pathLength = score;
+                s->next->ID = ID;
+                s->next->next = r;
+                r->prev = s->next->next;
+                if(k==rankLength){
+                    r = lastPosition->prev;
+                    r->next = NULL;
+                    free(lastPosition);
+                    lastPosition = r;
+                } else
+                    rankLength++;
+                return;
+            }
+            s = s->next;
+        }
+    }
+}
+
+void Add_Graph(int index,int k){
+    int score = 0;
+    add_score(score,index,k);
+};
+
+/**
+ * read all the graphs from the one with ID 0 and
+ * @param length
+ */
+void TopK(int length){
+    printf("ciaone");
+};
+
+int StringToNumberConverter(int *i,const char* vet){
+    int temp = 0;
+    if(!(vet[*i]<=57 && vet[*i]>= 48)){
+        (*i)++;
+    }
+    while (vet[*i]<=57 && vet[*i]>= 48){
+        if(temp == 0){
+            temp = vet[*i] - 48;
+        } else{
+            temp = temp*10 + (vet[*i] - 48);
+        }
+        (*i)++;
+    }
+    return temp;
+}
+
+int *RowAssembler(int *i,char* Pointer, int d){
+    int *temp = malloc(sizeof(int) *d);
+    for(int number = 0; number<d; number++){
+        temp[number] = StringToNumberConverter(i,Pointer);
+    }
+    (*i) = 0;
+    return temp;
 }
 
 int main() {
@@ -255,10 +366,50 @@ int main() {
     nil->father = nil;
     nil->dx = nil;
     nil->sx = nil;
+    firstPosition = NULL;
+    lastPosition = firstPosition;
     root = nil;
-    char vet[N];
-    char *Pointer;
+    int d,k,rowLength,size;
+    int index;
+    int *i;
+    int isAFunctionActive = 0;
+    size = N;
+    i = malloc(sizeof(int));
+    *i = 0;
+    d = 0;
+    k = 0;
+    index = -1;
+    char *Pointer = malloc(N);
     while (1) {
-        fgets(vet, N, stdin);
+        fgets(Pointer, size, stdin);
+        if(d == 0 || k==0){
+            d = StringToNumberConverter(i,Pointer);
+            k = StringToNumberConverter(i,Pointer);
+            if (d == 0){
+                return 0;
+            } else {
+                size = (11*(d*sizeof(int)));
+                Pointer = realloc(Pointer, size);
+            }
+            (*i) = 0;
+        }
+        if (!isAFunctionActive && Pointer[*i]==65){
+            isAFunctionActive = 1;
+            rowLength = d;
+            index++;
+        } else if(isAFunctionActive && rowLength>0){
+            if (index == 0) {
+                NodeCreate(-1 * (rowLength - d), RowAssembler(i, Pointer, d));
+            } else
+                Insert_Node(RowAssembler(i, Pointer, d),-1 * (rowLength - d));
+            rowLength--;
+            if (rowLength == 0){
+                Add_Graph(index,k);
+                isAFunctionActive = 0;
+            }
+        } else if (Pointer[*i] == 84){
+            TopK(k);
+            return 0;
+        }
     }
 }
