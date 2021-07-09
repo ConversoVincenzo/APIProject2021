@@ -351,12 +351,11 @@ int StringToNumberConverter(int *i,const char* vet){
     return temp;
 }
 
-int *RowAssembler(int *i,char* Pointer, int d){
+int *RowAssembler(char* Pointer, int d){
     int *temp = malloc(sizeof(int) *d);
     for(int number = 0; number<d; number++){
-        temp[number] = StringToNumberConverter(i,Pointer);
+        temp[number] = strtoul(Pointer,&Pointer,10);
     }
-    (*i) = 0;
     return temp;
 }
 
@@ -369,7 +368,8 @@ int main() {
     firstPosition = NULL;
     lastPosition = firstPosition;
     root = nil;
-    int d,k,rowLength,size;
+    unsigned long int size;
+    int d,k,rowLength;
     int index;
     int *i;
     int isAFunctionActive = 0;
@@ -383,15 +383,14 @@ int main() {
     while (1) {
         fgets(Pointer, size, stdin);
         if(d == 0 || k==0){
-            d = StringToNumberConverter(i,Pointer);
-            k = StringToNumberConverter(i,Pointer);
+            d = strtoul(Pointer,&Pointer,10);
+            k = strtoul(Pointer,&Pointer,10);
             if (d == 0){
                 return 0;
             } else {
                 size = (11*(d*sizeof(int)));
                 Pointer = realloc(Pointer, size);
             }
-            (*i) = 0;
         }
         if (!isAFunctionActive && Pointer[*i]==65){
             isAFunctionActive = 1;
@@ -399,9 +398,9 @@ int main() {
             index++;
         } else if(isAFunctionActive && rowLength>0){
             if (index == 0) {
-                NodeCreate(-1 * (rowLength - d), RowAssembler(i, Pointer, d));
+                NodeCreate(-1 * (rowLength - d), RowAssembler(Pointer, d));
             } else
-                Insert_Node(RowAssembler(i, Pointer, d),-1 * (rowLength - d));
+                Insert_Node(RowAssembler(Pointer, d),-1 * (rowLength - d));
             rowLength--;
             if (rowLength == 0){
                 Add_Graph(index,k);
