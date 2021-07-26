@@ -1,18 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define N (sizeof(char )*23)
-
-typedef struct Point{
-    int key;
-    int *num;
-    char color;
-    struct Point *father;
-    struct Point *dx;
-    struct Point *sx;
-}node;
-
 typedef struct temp{
     int pathLength;
     int ID;
@@ -20,11 +11,48 @@ typedef struct temp{
     struct temp* prev;
 }scoreRanking;
 
-node *root;
+typedef struct temp1{
+    int destinationVertex;
+    int length;
+    struct temp1 *next;
+    struct temp1 *prev;
+}proximity_list;
+
+typedef struct temp2{
+    int vertex;
+    int distance;
+}heap_node;
+
+typedef struct  temp3{
+    int *position;
+    int size;
+    int length;
+    heap_node **nodeList;
+}heap;
+
+typedef struct Point{
+    int key;
+    int size;
+    proximity_list *list;
+    char color;
+    struct Point *father;
+    struct Point *dx;
+    struct Point *sx;
+}node;
+
+node* root;
 node *nil;
 scoreRanking *firstPosition;
 scoreRanking *lastPosition;
+heap *minHeap;
 int rankLength = 0;
+
+typedef struct tree{
+    int size;
+    node* root;
+}tree;
+
+tree* RB_Tree;
 
 void left_rotate(node *x){
     node *y;
@@ -134,12 +162,14 @@ void RB_Insert(node *z){
     z->color = 'R';
     RB_Insert_Fixup(z);
 }
-void NodeCreate(int key, int *num){
+void NodeCreate(int key, proximity_list *num){
     node *z;
     z=malloc(sizeof(node));
     z->key = key;
-    z->num = num;
+    z->list = num;
     RB_Insert(z);
+    RB_Tree->size++;
+    RB_Tree->root = root;
 }
 void RB_Delete_Fixup(node *x){
     node *w;
@@ -253,10 +283,171 @@ node  *Searching(int key){
     return x;
 
 }
-void Insert_Node(int *num,int ind1){
+
+void swap(heap_node **list,int i, int max){
+    heap_node* temp = list[max];
+    list[max] = list[i];
+    list[i] = temp;
+}
+void minHeapify(int i, heap *hp){
+    int left = 2*i;
+    int right = 2*i + 1;
+    int posMax;
+    if(left <= hp->size && hp->nodeList[left]->distance<hp->nodeList[i]->distance){
+        posMax = left;
+    } else
+        posMax = i;
+    if(right <= hp->size && hp->nodeList[right]->distance<hp->nodeList[posMax]->distance){
+        posMax = right;
+    }
+    if(posMax!=i){
+        swap(hp->nodeList,i,posMax);
+        minHeapify(posMax,hp);
+    }
+}
+void Create_Min_Heap(int nodeListLength){
+    minHeap = malloc(sizeof (heap));
+    minHeap->nodeList = malloc(nodeListLength* sizeof(heap_node));
+    minHeap->length = nodeListLength;
+    minHeap->size = 0;
+}
+heap_node *Min(){
+    return minHeap->nodeList[0];
+}
+heap_node *Delete_Min() {
+    if (minHeap->size < 1) {
+        return NULL;
+    }
+    heap_node *min = minHeap->nodeList[0];
+    minHeap->size = minHeap->size - 1;
+    minHeap->nodeList[0] = minHeap->nodeList[minHeap->size];
+    minHeapify(0,minHeap);
+    return min;
+}
+int Parent(int i){
+    return (i - 1) / 2;
+};
+void Insert(int key){
+    int temp = minHeap->size + 1;
+    minHeap->size = temp;
+    int i = minHeap->size - 1;
+    while (i>0 && minHeap->nodeList[Parent(i)] > minHeap->nodeList[i]) {
+        swap(minHeap->nodeList, Parent(i), i);
+        i = Parent(i);
+    }
+}
+
+void decreaseKey(int vert, int dist) {
+    int i = minHeap->position[vert];
+    minHeap->nodeList[i]->distance = dist;
+    while (i && minHeap->nodeList[i]->distance < minHeap->nodeList[Parent(i)]->distance) {
+        minHeap->position[minHeap->nodeList[i]->vertex] = Parent(i);
+        minHeap->position[minHeap->nodeList[Parent(i)]->vertex] = i;
+        swap(minHeap->nodeList,i, Parent(i));
+        i = Parent(i);
+    }
+}
+
+heap_node *extractMin(){
+    if (minHeap->size<1)
+        return NULL;
+    heap_node *heapRoot = minHeap->nodeList[0];
+    heap_node *heapLeaf = minHeap->nodeList[minHeap->size - 1];
+    minHeap->nodeList[0] = heapLeaf;
+    minHeap->position[heapLeaf->vertex] = 0;
+    minHeap->position[heapRoot->vertex] = minHeap->size-1;
+    minHeap->size = minHeap->size - 1;
+    minHeapify(0,minHeap);
+    return heapRoot;
+}
+
+void DijkstraQueue(int vertexSrc){
+    int distance[RB_Tree->size];
+    Create_Min_Heap(RB_Tree->size);
+
+};
+
+void Insert_NodeV1(proximity_list *num, int key) {
+    node *x;
+    x = Searching(key);
+    proximity_list *s, *r;
+    s = x->list;
+    while (s != NULL && num->destinationVertex > s->destinationVertex) {
+        r = s;
+        s = s->next;
+        s->prev = NULL;
+        free(r);
+    }
+    if (s == NULL) {
+        x->list = num;
+        return;
+    }
+    x->list = num;
+    while (num != NULL && num->destinationVertex < s->destinationVertex) {
+        r = num;
+        num = num->next;
+        r->next = s;
+        if (s->prev == NULL) {
+            s->prev = r;
+            r->prev = NULL;
+        } else {
+            s->prev->next = r;
+            r->prev = s->prev;
+            s->prev = r;
+        }
+    }
+    if (num == NULL) {
+        while (s != NULL) {
+            r = s;
+            s = s->next;
+            free(r);
+        }
+        return;
+    }
+    while (num != NULL && s->next != NULL) {
+        if (num->destinationVertex > s->destinationVertex) {
+            r = s;
+            s = s->next;
+            s->prev = r->prev;
+            free(r);
+        } else if (num->destinationVertex == s->destinationVertex) {
+            s->length = num->length;
+            r = num;
+            num = num->next;
+            s = s->next;
+            free(r);
+        } else {
+            r = num;
+            num = num->next;
+            r->next = s;
+            r->prev = s->prev;
+            s->prev->next = r;
+            s->prev = r;
+        }
+    }
+    while (num != NULL) {
+        s->next = num;
+        num->prev = s;
+    }
+    while (s != NULL) {
+        r = s;
+        s = s->next;
+        free(r);
+    }
+}
+void Insert_Node(proximity_list *num,int ind1){
     node *x;
     x = Searching(ind1);
-    x->num = num;
+    proximity_list *prev,*next;
+    prev = x->list;
+    while(prev!=NULL){
+        next = prev->next;
+        prev->next = NULL;
+        prev->prev = NULL;
+        free(prev);
+        prev = next;
+    }
+    x->list = num;
 }
 void add_score(int score,int ID,int k){
     scoreRanking *s,*r;
@@ -335,29 +526,27 @@ void TopK(int length){
     printf("ciaone");
 };
 
-int StringToNumberConverter(int *i,const char* vet){
-    int temp = 0;
-    if(!(vet[*i]<=57 && vet[*i]>= 48)){
-        (*i)++;
-    }
-    while (vet[*i]<=57 && vet[*i]>= 48){
-        if(temp == 0){
-            temp = vet[*i] - 48;
-        } else{
-            temp = temp*10 + (vet[*i] - 48);
-        }
-        (*i)++;
-    }
-    return temp;
-}
-
-int *RowAssembler(int *i,char* Pointer, int d){
-    int *temp = malloc(sizeof(int) *d);
+proximity_list *RowAssembler(char* Pointer, int d,int vertex){
+    proximity_list *temp,*prev;
+    proximity_list *head = NULL;
+    prev = NULL;
+    int length;
     for(int number = 0; number<d; number++){
-        temp[number] = StringToNumberConverter(i,Pointer);
+        length = strtoul(Pointer, &Pointer, 10);
+        if (length != 0 && vertex < number) {
+            temp = malloc(sizeof(proximity_list));
+            if(prev == NULL){
+                head = temp;
+            } else
+                prev->next = temp;
+            temp->length = length;
+            temp->destinationVertex = number;
+            temp->prev = prev;
+            temp->next = NULL;
+            prev = temp;
+        }
     }
-    (*i) = 0;
-    return temp;
+    return head;
 }
 
 int main() {
@@ -369,10 +558,13 @@ int main() {
     firstPosition = NULL;
     lastPosition = firstPosition;
     root = nil;
-    int d,k,rowLength,size;
+    RB_Tree->size = 0;
+    RB_Tree->root = root;
+    int size;
+    int d,k,rowLength;
     int index;
     int *i;
-    int isAFunctionActive = 0;
+    bool isAFunctionActive = false;
     size = N;
     i = malloc(sizeof(int));
     *i = 0;
@@ -380,36 +572,40 @@ int main() {
     k = 0;
     index = -1;
     char *Pointer = malloc(N);
+    char *SecondPointer = NULL;
     while (1) {
-        fgets(Pointer, size, stdin);
+        if(fgets(Pointer, size, stdin) == NULL)
+            return 0;
+        SecondPointer = Pointer;
         if(d == 0 || k==0){
-            d = StringToNumberConverter(i,Pointer);
-            k = StringToNumberConverter(i,Pointer);
+            d = strtoul(SecondPointer,&SecondPointer,10);
+            k = strtoul(SecondPointer,&SecondPointer,10);
             if (d == 0){
                 return 0;
             } else {
-                size = (11*(d*sizeof(int)));
+                size = (d*sizeof(int));
                 Pointer = realloc(Pointer, size);
             }
             (*i) = 0;
         }
         if (!isAFunctionActive && Pointer[*i]==65){
-            isAFunctionActive = 1;
+            isAFunctionActive = true;
             rowLength = d;
             index++;
         } else if(isAFunctionActive && rowLength>0){
+            int key = -1 * (rowLength - d);
             if (index == 0) {
-                NodeCreate(-1 * (rowLength - d), RowAssembler(i, Pointer, d));
+                NodeCreate(key, RowAssembler(SecondPointer, d, key));
             } else
-                Insert_Node(RowAssembler(i, Pointer, d),-1 * (rowLength - d));
+                Insert_Node(RowAssembler(SecondPointer, d, key),key);
             rowLength--;
             if (rowLength == 0){
                 Add_Graph(index,k);
-                isAFunctionActive = 0;
+                RB_Tree->size = 0;
+                isAFunctionActive = false;
             }
         } else if (Pointer[*i] == 84){
             TopK(k);
-            return 0;
         }
     }
 }
