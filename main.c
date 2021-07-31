@@ -2,8 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #define N (sizeof(char )*23)
+
 typedef struct temp{
     int pathLength;
     int ID;
@@ -32,7 +34,6 @@ typedef struct  temp3{
 
 typedef struct Point{
     int key;
-    int size;
     proximity_list *list;
     char color;
     struct Point *father;
@@ -310,6 +311,7 @@ void Create_Min_Heap(int nodeListLength){
     minHeap->nodeList = malloc(nodeListLength* sizeof(heap_node));
     minHeap->length = nodeListLength;
     minHeap->size = 0;
+    minHeap->position = malloc(nodeListLength *sizeof(int));
 }
 heap_node *Min(){
     return minHeap->nodeList[0];
@@ -361,10 +363,47 @@ heap_node *extractMin(){
     return heapRoot;
 }
 
-void DijkstraQueue(int vertexSrc){
+int DijkstraQueue(){
     int distance[RB_Tree->size];
+    int temp;
+    int vertexSrc = 0;
+    heap_node *heapNode;
     Create_Min_Heap(RB_Tree->size);
-
+    for(int i = 0; i < RB_Tree->size; i++){
+        distance[i] = INT_MAX;
+        minHeap->nodeList[i] = malloc(sizeof (heap_node));
+        minHeap->nodeList[i]->vertex = i;
+        minHeap->nodeList[i]->distance = distance[i];
+        minHeap->position[i] = i;
+    }
+    minHeap->nodeList[vertexSrc] = malloc(sizeof (heap_node));
+    minHeap->nodeList[vertexSrc]->vertex = vertexSrc;
+    minHeap->nodeList[vertexSrc]->distance = distance[vertexSrc];
+    minHeap->position[vertexSrc] = vertexSrc;
+    distance[vertexSrc] = 0;
+    decreaseKey(vertexSrc,distance[vertexSrc]);
+    minHeap->size = RB_Tree->size;
+    while(minHeap->size != 0){
+        heapNode = extractMin();
+        temp = heapNode->vertex;
+        proximity_list *list = Searching(temp)->list;
+        int vTemp;
+        while(list != NULL){
+            vTemp = list->destinationVertex;
+            if (minHeap->position[vTemp] < minHeap->size && distance[temp] != INT_MAX && list->length + distance[temp] < distance[vTemp]){
+                distance[vTemp] = distance[temp] + list->length;
+                decreaseKey(vTemp,distance[vTemp]);
+            }
+            list = list->next;
+        }
+    }
+    int score = 0;
+    for (int i = 0; i < RB_Tree->size; i++) {
+        if (distance[i] != INT_MAX) {
+            score = score + distance[i];
+        }
+    }
+    return score;
 };
 
 void Insert_NodeV1(proximity_list *num, int key) {
@@ -438,6 +477,10 @@ void Insert_NodeV1(proximity_list *num, int key) {
 void Insert_Node(proximity_list *num,int ind1){
     node *x;
     x = Searching(ind1);
+    if (x == NULL || x == nil){
+        NodeCreate(ind1,num);
+        return;
+    }
     proximity_list *prev,*next;
     prev = x->list;
     while(prev!=NULL){
@@ -448,6 +491,7 @@ void Insert_Node(proximity_list *num,int ind1){
         prev = next;
     }
     x->list = num;
+    RB_Tree->size++;
 }
 void add_score(int score,int ID,int k){
     scoreRanking *s,*r;
@@ -460,7 +504,7 @@ void add_score(int score,int ID,int k){
         lastPosition = firstPosition;
         rankLength++;
         return;
-    } else if (firstPosition->pathLength<score){
+    } else if (firstPosition->pathLength>score){
         s = firstPosition;
         firstPosition = malloc(sizeof (scoreRanking));
         firstPosition->ID = ID;
@@ -475,7 +519,7 @@ void add_score(int score,int ID,int k){
             lastPosition = r;
         } else
             rankLength++;
-    } else if(lastPosition->pathLength >= score){
+    } else if(lastPosition->pathLength <= score){
         if(k==rankLength){
             return;
         } else{
@@ -485,20 +529,21 @@ void add_score(int score,int ID,int k){
             s->next->pathLength = score;
             s->next->next = NULL;
             s->next->prev = lastPosition;
-            lastPosition = s;
+            lastPosition = s->next;
             rankLength++;
             return;
         }
     } else {
         s = firstPosition;
         while (s->next != NULL) {
-            if (s->next->pathLength < score) {
+            if (s->next->pathLength > score) {
                 r = s->next;
                 s->next = malloc(sizeof(scoreRanking));
+                s->next->prev = r->prev;
                 s->next->pathLength = score;
                 s->next->ID = ID;
                 s->next->next = r;
-                r->prev = s->next->next;
+                r->prev = s->next;
                 if(k==rankLength){
                     r = lastPosition->prev;
                     r->next = NULL;
@@ -512,9 +557,8 @@ void add_score(int score,int ID,int k){
         }
     }
 }
-
 void Add_Graph(int index,int k){
-    int score = 0;
+    int score = DijkstraQueue();
     add_score(score,index,k);
 };
 
@@ -522,8 +566,33 @@ void Add_Graph(int index,int k){
  * read all the graphs from the one with ID 0 and
  * @param length
  */
-void TopK(int length){
-    printf("ciaone");
+void TopK(int k,int length){
+    scoreRanking *head_temp = firstPosition;
+    scoreRanking *tail_temp = lastPosition;
+    if(length>k){
+        length = k;
+    }
+    int buffer[length];
+    int temp = length;
+    for (int i = 0; i < length/2; i++) {
+        buffer[i] = head_temp->ID;
+        temp--;
+        buffer[temp] = tail_temp->ID;
+        head_temp = head_temp->next;
+        tail_temp = tail_temp->prev;
+    }
+    if(length%2 != 0){
+        buffer[length/2] = tail_temp->ID;
+    }
+    temp = length - 1;
+    for (int i = 0; i < length; i++) {
+        if (i == temp){
+            printf("%d", buffer[i]);
+            return;
+        } else {
+            printf("%d ", buffer[i]);
+        }
+    }
 };
 
 proximity_list *RowAssembler(char* Pointer, int d,int vertex){
@@ -533,7 +602,8 @@ proximity_list *RowAssembler(char* Pointer, int d,int vertex){
     int length;
     for(int number = 0; number<d; number++){
         length = strtoul(Pointer, &Pointer, 10);
-        if (length != 0 && vertex < number) {
+        Pointer = Pointer + sizeof (char );
+        if (length != 0 && vertex != number && number != 0) {
             temp = malloc(sizeof(proximity_list));
             if(prev == NULL){
                 head = temp;
@@ -558,10 +628,11 @@ int main() {
     firstPosition = NULL;
     lastPosition = firstPosition;
     root = nil;
+    RB_Tree = malloc(sizeof (tree));
     RB_Tree->size = 0;
     RB_Tree->root = root;
     int size;
-    int d,k,rowLength;
+    int d,k,rowLength,numOfMatrixProc;
     int index;
     int *i;
     bool isAFunctionActive = false;
@@ -570,6 +641,7 @@ int main() {
     *i = 0;
     d = 0;
     k = 0;
+    numOfMatrixProc = 0;
     index = -1;
     char *Pointer = malloc(N);
     char *SecondPointer = NULL;
@@ -583,7 +655,7 @@ int main() {
             if (d == 0){
                 return 0;
             } else {
-                size = (d*sizeof(int));
+                size = (d*10*sizeof(char));
                 Pointer = realloc(Pointer, size);
             }
             (*i) = 0;
@@ -601,11 +673,18 @@ int main() {
             rowLength--;
             if (rowLength == 0){
                 Add_Graph(index,k);
+                numOfMatrixProc++;
                 RB_Tree->size = 0;
+                while(minHeap->size != 0){
+                    free(Delete_Min());
+                }
+                free(minHeap->nodeList);
+                free(minHeap);
                 isAFunctionActive = false;
             }
         } else if (Pointer[*i] == 84){
-            TopK(k);
+            TopK(k,numOfMatrixProc);
+            printf("\n");
         }
     }
 }
