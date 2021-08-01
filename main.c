@@ -28,7 +28,6 @@ typedef struct temp2{
 typedef struct  temp3{
     int *position;
     int size;
-    int length;
     heap_node **nodeList;
 }heap;
 
@@ -285,14 +284,27 @@ node  *Searching(int key){
 
 }
 
+int Parent(int i){
+    return (i - 1) / 2;
+};
+
+int Left(int i){
+    return i*2 +1;
+}
+
+int Right(int i){
+    return i*2 +2;
+}
 void swap(heap_node **list,int i, int max){
+    minHeap->position[i] = max;
+    minHeap->position[max] = i;
     heap_node* temp = list[max];
     list[max] = list[i];
     list[i] = temp;
 }
 void minHeapify(int i, heap *hp){
-    int left = 2*i;
-    int right = 2*i + 1;
+    int left = Left(i);
+    int right = Right(i);
     int posMax;
     if(left <= hp->size && hp->nodeList[left]->distance<hp->nodeList[i]->distance){
         posMax = left;
@@ -309,34 +321,14 @@ void minHeapify(int i, heap *hp){
 void Create_Min_Heap(int nodeListLength){
     minHeap = malloc(sizeof (heap));
     minHeap->nodeList = malloc(nodeListLength* sizeof(heap_node));
-    minHeap->length = nodeListLength;
     minHeap->size = 0;
     minHeap->position = malloc(nodeListLength *sizeof(int));
 }
-heap_node *Min(){
-    return minHeap->nodeList[0];
-}
-heap_node *Delete_Min() {
-    if (minHeap->size < 1) {
-        return NULL;
-    }
-    heap_node *min = minHeap->nodeList[0];
-    minHeap->size = minHeap->size - 1;
-    minHeap->nodeList[0] = minHeap->nodeList[minHeap->size];
-    minHeapify(0,minHeap);
-    return min;
-}
-int Parent(int i){
-    return (i - 1) / 2;
-};
-void Insert(int key){
-    int temp = minHeap->size + 1;
-    minHeap->size = temp;
-    int i = minHeap->size - 1;
-    while (i>0 && minHeap->nodeList[Parent(i)] > minHeap->nodeList[i]) {
-        swap(minHeap->nodeList, Parent(i), i);
-        i = Parent(i);
-    }
+
+void Insert(int i,int distance){
+    minHeap->nodeList[i] = malloc(sizeof (heap_node));
+    minHeap->nodeList[i]->vertex = i;
+    minHeap->nodeList[i]->distance = distance;
 }
 
 void decreaseKey(int vert, int dist) {
@@ -371,14 +363,10 @@ int DijkstraQueue(){
     Create_Min_Heap(RB_Tree->size);
     for(int i = 0; i < RB_Tree->size; i++){
         distance[i] = INT_MAX;
-        minHeap->nodeList[i] = malloc(sizeof (heap_node));
-        minHeap->nodeList[i]->vertex = i;
-        minHeap->nodeList[i]->distance = distance[i];
+        Insert(i,distance[i]);
         minHeap->position[i] = i;
     }
-    minHeap->nodeList[vertexSrc] = malloc(sizeof (heap_node));
-    minHeap->nodeList[vertexSrc]->vertex = vertexSrc;
-    minHeap->nodeList[vertexSrc]->distance = distance[vertexSrc];
+    Insert(vertexSrc,distance[vertexSrc]);
     minHeap->position[vertexSrc] = vertexSrc;
     distance[vertexSrc] = 0;
     decreaseKey(vertexSrc,distance[vertexSrc]);
@@ -390,12 +378,13 @@ int DijkstraQueue(){
         int vTemp;
         while(list != NULL){
             vTemp = list->destinationVertex;
-            if (minHeap->position[vTemp] < minHeap->size && distance[temp] != INT_MAX && list->length + distance[temp] < distance[vTemp]){
+            if (minHeap->position[vTemp] < minHeap->size && distance[temp] < INT_MAX && list->length + distance[temp] < distance[vTemp]){
                 distance[vTemp] = distance[temp] + list->length;
                 decreaseKey(vTemp,distance[vTemp]);
             }
             list = list->next;
         }
+        free(heapNode);
     }
     int score = 0;
     for (int i = 0; i < RB_Tree->size; i++) {
@@ -477,10 +466,6 @@ void Insert_NodeV1(proximity_list *num, int key) {
 void Insert_Node(proximity_list *num,int ind1){
     node *x;
     x = Searching(ind1);
-    if (x == NULL || x == nil){
-        NodeCreate(ind1,num);
-        return;
-    }
     proximity_list *prev,*next;
     prev = x->list;
     while(prev!=NULL){
@@ -600,7 +585,8 @@ proximity_list *RowAssembler(char* Pointer, int d,int vertex){
     proximity_list *head = NULL;
     prev = NULL;
     int length;
-    for(int number = 0; number<d; number++){
+    int number = 0;
+    while(strlen(Pointer) != 0){
         length = strtoul(Pointer, &Pointer, 10);
         Pointer = Pointer + sizeof (char );
         if (length != 0 && vertex != number && number != 0) {
@@ -615,6 +601,7 @@ proximity_list *RowAssembler(char* Pointer, int d,int vertex){
             temp->next = NULL;
             prev = temp;
         }
+        number++;
     }
     return head;
 }
@@ -675,11 +662,8 @@ int main() {
                 Add_Graph(index,k);
                 numOfMatrixProc++;
                 RB_Tree->size = 0;
-                while(minHeap->size != 0){
-                    free(Delete_Min());
-                }
-                free(minHeap->nodeList);
                 free(minHeap);
+                minHeap = NULL;
                 isAFunctionActive = false;
             }
         } else if (Pointer[*i] == 84){
