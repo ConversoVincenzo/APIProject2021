@@ -32,257 +32,15 @@ typedef struct  temp3{
 }heap;
 
 typedef struct Point{
-    int key;
-    proximity_list *list;
-    char color;
-    struct Point *father;
-    struct Point *dx;
-    struct Point *sx;
+    int size;
+    proximity_list **list;
 }node;
 
-node* root;
-node *nil;
+node *listBuffer;
 scoreRanking *firstPosition;
 scoreRanking *lastPosition;
 heap *minHeap;
 int rankLength = 0;
-
-typedef struct tree{
-    int size;
-    node* root;
-}tree;
-
-tree* RB_Tree;
-
-void left_rotate(node *x){
-    node *y;
-    y=x->dx;
-    x->dx = y->sx;
-    if (y->sx!=nil){
-        y->sx->father = x;
-    }
-    y->father = x->father;
-    if( x->father == nil){
-        root = y;
-    }else if(x==x->father->sx){
-        x->father->sx = y;
-    } else{
-        x->father->dx = y;
-    }
-    y->sx = x;
-    x->father = y;
-}
-void right_rotate(node *x){
-    node *y;
-    y=x->sx;
-    x->sx = y->dx;
-    if (y->dx!=nil){
-        y->dx->father = x;
-    }
-    y->father = x->father;
-    if( x->father == nil){
-        root = y;
-    }else if(x==x->father->dx){
-        x->father->dx = y;
-    } else{
-        x->father->sx = y;
-    }
-    y->dx = x;
-    x->father = y;
-}
-void RB_Insert_Fixup(node *z){
-    node  *x;
-    node *y;
-    if(z==root){
-        root->color = 'B';
-    } else{
-        x = z->father;
-        if(x->color == 'R'){
-            if(x==x->father->sx){
-                y = x->father->dx;
-                if(y->color == 'R'){
-                    x->color = 'B';
-                    y->color = 'B';
-                    x->father->color = 'R';
-                    RB_Insert_Fixup(x->father);
-                } else {
-                    if(z == x->dx){
-                        z = x;
-                        left_rotate(z);
-                        x = z->father;
-                    }
-                    x->color= 'B';
-                    x->father->color = 'R';
-                    right_rotate(x->father);}
-            } else{
-                y= x->father->sx;
-                if (y->color == 'R'){
-                    x->color = 'B';
-                    y->color = 'B';
-                    x->father->color = 'R';
-                    RB_Insert_Fixup(x->father);
-                }else {
-                    if(z == x->sx){
-                        z= x;
-                        right_rotate(z);
-                        x= z->father;
-                    }
-                    x->color = 'B';
-                    x->father->color = 'R';
-                    left_rotate(x->father);
-                }
-            }
-        }
-    }
-}
-void RB_Insert(node *z){
-    node *x;
-    node *y;
-    x = root;
-    y = nil;
-    while (x!=nil){
-        y = x;
-        if (z->key < x->key){
-            x = x->sx;
-        } else{
-            x= x->dx;
-        }
-        z->father = y;
-    }
-    if (y == nil){
-        root = z;
-        root->father = nil;
-    }else if (z->key < y->key){
-        y->sx = z;
-    }else {
-        y->dx = z;
-    }
-    z->sx = nil;
-    z->dx = nil;
-    z->color = 'R';
-    RB_Insert_Fixup(z);
-}
-void NodeCreate(int key, proximity_list *num){
-    node *z;
-    z=malloc(sizeof(node));
-    z->key = key;
-    z->list = num;
-    RB_Insert(z);
-    RB_Tree->size++;
-    RB_Tree->root = root;
-}
-void RB_Delete_Fixup(node *x){
-    node *w;
-    if (x->color == 'R' || x->father == nil){
-        x->color = 'B';
-    } else if (x == x->father->sx){
-        w = x->father->dx;
-        if (w->color == 'R'){
-            w->color='B';
-            x->father->color='R';
-            left_rotate(x->father);
-            w=x->father->dx;
-        }
-        if (w->sx->color == 'B' && w->dx->color == 'B'){
-            w->color = 'R';
-            RB_Delete_Fixup(x->father);
-        } else{
-            if (w->dx->color == 'B'){
-                w->sx->color = 'B';
-                w->color = 'R';
-                right_rotate(w);
-                w=x->father->dx;
-            }
-            w->color = x->father->color;
-            x->father->color = 'B';
-            w->dx->color = 'B';
-            left_rotate(x->father);
-        }
-    } else{
-        w = x->father->sx;
-        if (w->color == 'R'){
-            w->color='B';
-            x->father->color='R';
-            right_rotate(x->father);
-            w=x->father->sx;
-        }
-        if (w->dx->color == 'B' && w->sx->color == 'B'){
-            w->color = 'R';
-            RB_Delete_Fixup(x->father);
-        } else{
-            if (w->sx->color == 'B'){
-                w->dx->color = 'B';
-                w->color = 'R';
-                left_rotate(w);
-                w=x->father->sx;
-            }
-            w->color = x->father->color;
-            x->father->color = 'B';
-            w->sx->color = 'B';
-            right_rotate(x->father);
-        }
-
-    }
-}
-node *Tree_Min(node *x){
-    while (x->sx!=nil){
-        x = x->sx;
-    }
-    return x;
-}
-node *Tree_Next(node *x){
-    node  *y;
-    if (x->dx != nil){
-        return Tree_Min(x->dx);
-    }
-    y = x->father;
-    while (y!=nil && x == y->dx){
-        x = y;
-        y = y->father;
-    }
-    return y;
-}
-node *RB_Delete(node *z){
-    node *x;
-    node *y;
-    if ( z->sx == nil || z->dx == nil){
-        y = z;
-    } else{
-        y = Tree_Next(z);
-    }
-    if (y->sx!= nil){
-        x = y->sx;
-    } else{
-        x= y->dx;
-    }
-    x->father = y->father ;
-    if(y->father == nil){
-        root = x;
-    } else if( y == y->father->sx){
-        y->father->sx = x;
-    } else {
-        y->father->dx = x;
-    }
-    if (y!=z){
-        z->key = y->key;
-    }
-    if (y->color == 'B'){
-        RB_Delete_Fixup(x);
-    }
-    return y;
-}
-node  *Searching(int key){
-    node  *x = root;
-    while (x != nil && key != x->key){
-        if (x->key>key){
-            x=x->sx;
-        } else{
-            x=x->dx;
-        }
-    }
-    return x;
-
-}
 
 int Parent(int i){
     return (i - 1) / 2;
@@ -356,12 +114,12 @@ heap_node *extractMin(){
 }
 
 int DijkstraQueue(){
-    int distance[RB_Tree->size];
+    int distance[listBuffer->size];
     int temp;
     int vertexSrc = 0;
     heap_node *heapNode;
-    Create_Min_Heap(RB_Tree->size);
-    for(int i = 0; i < RB_Tree->size; i++){
+    Create_Min_Heap(listBuffer->size);
+    for(int i = 0; i < listBuffer->size; i++){
         distance[i] = INT_MAX;
         Insert(i,distance[i]);
         minHeap->position[i] = i;
@@ -370,11 +128,11 @@ int DijkstraQueue(){
     minHeap->position[vertexSrc] = vertexSrc;
     distance[vertexSrc] = 0;
     decreaseKey(vertexSrc,distance[vertexSrc]);
-    minHeap->size = RB_Tree->size;
+    minHeap->size = listBuffer->size;
     while(minHeap->size != 0){
         heapNode = extractMin();
         temp = heapNode->vertex;
-        proximity_list *list = Searching(temp)->list;
+        proximity_list *list = listBuffer->list[temp];
         int vTemp;
         while(list != NULL){
             vTemp = list->destinationVertex;
@@ -387,7 +145,7 @@ int DijkstraQueue(){
         free(heapNode);
     }
     int score = 0;
-    for (int i = 0; i < RB_Tree->size; i++) {
+    for (int i = 0; i < listBuffer->size; i++) {
         if (distance[i] != INT_MAX) {
             score = score + distance[i];
         }
@@ -395,79 +153,10 @@ int DijkstraQueue(){
     return score;
 };
 
-void Insert_NodeV1(proximity_list *num, int key) {
-    node *x;
-    x = Searching(key);
-    proximity_list *s, *r;
-    s = x->list;
-    while (s != NULL && num->destinationVertex > s->destinationVertex) {
-        r = s;
-        s = s->next;
-        s->prev = NULL;
-        free(r);
-    }
-    if (s == NULL) {
-        x->list = num;
-        return;
-    }
-    x->list = num;
-    while (num != NULL && num->destinationVertex < s->destinationVertex) {
-        r = num;
-        num = num->next;
-        r->next = s;
-        if (s->prev == NULL) {
-            s->prev = r;
-            r->prev = NULL;
-        } else {
-            s->prev->next = r;
-            r->prev = s->prev;
-            s->prev = r;
-        }
-    }
-    if (num == NULL) {
-        while (s != NULL) {
-            r = s;
-            s = s->next;
-            free(r);
-        }
-        return;
-    }
-    while (num != NULL && s->next != NULL) {
-        if (num->destinationVertex > s->destinationVertex) {
-            r = s;
-            s = s->next;
-            s->prev = r->prev;
-            free(r);
-        } else if (num->destinationVertex == s->destinationVertex) {
-            s->length = num->length;
-            r = num;
-            num = num->next;
-            s = s->next;
-            free(r);
-        } else {
-            r = num;
-            num = num->next;
-            r->next = s;
-            r->prev = s->prev;
-            s->prev->next = r;
-            s->prev = r;
-        }
-    }
-    while (num != NULL) {
-        s->next = num;
-        num->prev = s;
-    }
-    while (s != NULL) {
-        r = s;
-        s = s->next;
-        free(r);
-    }
-}
+
 void Insert_Node(proximity_list *num,int ind1){
-    node *x;
-    x = Searching(ind1);
     proximity_list *prev,*next;
-    prev = x->list;
+    prev = listBuffer->list[ind1];
     while(prev!=NULL){
         next = prev->next;
         prev->next = NULL;
@@ -475,8 +164,8 @@ void Insert_Node(proximity_list *num,int ind1){
         free(prev);
         prev = next;
     }
-    x->list = num;
-    RB_Tree->size++;
+    listBuffer->list[ind1] = num;
+    listBuffer->size++;
 }
 void add_score(int score,int ID,int k){
     scoreRanking *s,*r;
@@ -580,7 +269,7 @@ void TopK(int k,int length){
     }
 };
 
-proximity_list *RowAssembler(char* Pointer, int d,int vertex){
+proximity_list *RowAssembler(char* Pointer,int vertex){
     proximity_list *temp,*prev;
     proximity_list *head = NULL;
     prev = NULL;
@@ -607,17 +296,10 @@ proximity_list *RowAssembler(char* Pointer, int d,int vertex){
 }
 
 int main() {
-    nil = malloc(sizeof(node));
-    nil->color = 'B';
-    nil->father = nil;
-    nil->dx = nil;
-    nil->sx = nil;
     firstPosition = NULL;
     lastPosition = firstPosition;
-    root = nil;
-    RB_Tree = malloc(sizeof (tree));
-    RB_Tree->size = 0;
-    RB_Tree->root = root;
+    listBuffer = malloc(sizeof (node));
+    listBuffer->size = 0;
     int size;
     int d,k,rowLength,numOfMatrixProc;
     int index;
@@ -639,6 +321,7 @@ int main() {
         if(d == 0 || k==0){
             d = strtoul(SecondPointer,&SecondPointer,10);
             k = strtoul(SecondPointer,&SecondPointer,10);
+            listBuffer->list = malloc(d*sizeof(proximity_list));
             if (d == 0){
                 return 0;
             } else {
@@ -653,15 +336,12 @@ int main() {
             index++;
         } else if(isAFunctionActive && rowLength>0){
             int key = -1 * (rowLength - d);
-            if (index == 0) {
-                NodeCreate(key, RowAssembler(SecondPointer, d, key));
-            } else
-                Insert_Node(RowAssembler(SecondPointer, d, key),key);
+            Insert_Node(RowAssembler(SecondPointer, key),key);
             rowLength--;
             if (rowLength == 0){
                 Add_Graph(index,k);
                 numOfMatrixProc++;
-                RB_Tree->size = 0;
+                listBuffer->size = 0;
                 free(minHeap);
                 minHeap = NULL;
                 isAFunctionActive = false;
