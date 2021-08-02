@@ -15,9 +15,8 @@ typedef struct temp{
 
 typedef struct temp1{
     int destinationVertex;
-    int length;
+    unsigned long int length;
     struct temp1 *next;
-    struct temp1 *prev;
 }proximity_list;
 
 typedef struct temp2{
@@ -46,13 +45,7 @@ scoreRanking *firstPosition;
 scoreRanking *lastPosition;
 heap *minHeap;
 int rankLength = 0;
-
-typedef struct tree{
-    int size;
-    node* root;
-}tree;
-
-tree* RB_Tree;
+int size;
 
 void left_rotate(node *x){
     node *y;
@@ -168,8 +161,7 @@ void NodeCreate(int key, proximity_list *num){
     z->key = key;
     z->list = num;
     RB_Insert(z);
-    RB_Tree->size++;
-    RB_Tree->root = root;
+    size++;
 }
 void RB_Delete_Fixup(node *x){
     node *w;
@@ -224,53 +216,6 @@ void RB_Delete_Fixup(node *x){
 
     }
 }
-node *Tree_Min(node *x){
-    while (x->sx!=nil){
-        x = x->sx;
-    }
-    return x;
-}
-node *Tree_Next(node *x){
-    node  *y;
-    if (x->dx != nil){
-        return Tree_Min(x->dx);
-    }
-    y = x->father;
-    while (y!=nil && x == y->dx){
-        x = y;
-        y = y->father;
-    }
-    return y;
-}
-node *RB_Delete(node *z){
-    node *x;
-    node *y;
-    if ( z->sx == nil || z->dx == nil){
-        y = z;
-    } else{
-        y = Tree_Next(z);
-    }
-    if (y->sx!= nil){
-        x = y->sx;
-    } else{
-        x= y->dx;
-    }
-    x->father = y->father ;
-    if(y->father == nil){
-        root = x;
-    } else if( y == y->father->sx){
-        y->father->sx = x;
-    } else {
-        y->father->dx = x;
-    }
-    if (y!=z){
-        z->key = y->key;
-    }
-    if (y->color == 'B'){
-        RB_Delete_Fixup(x);
-    }
-    return y;
-}
 node  *Searching(int key){
     node  *x = root;
     while (x != nil && key != x->key){
@@ -296,26 +241,26 @@ int Right(int i){
     return i*2 +2;
 }
 void swap(heap_node **list,int i, int max){
-    minHeap->position[i] = max;
-    minHeap->position[max] = i;
     heap_node* temp = list[max];
     list[max] = list[i];
     list[i] = temp;
 }
-void minHeapify(int i, heap *hp){
+void minHeapify(int i){
     int left = Left(i);
     int right = Right(i);
     int posMax;
-    if(left <= hp->size && hp->nodeList[left]->distance<hp->nodeList[i]->distance){
+    if(left <= minHeap->size && minHeap->nodeList[left]->distance<minHeap->nodeList[i]->distance){
         posMax = left;
     } else
         posMax = i;
-    if(right <= hp->size && hp->nodeList[right]->distance<hp->nodeList[posMax]->distance){
+    if(right <= minHeap->size && minHeap->nodeList[right]->distance<minHeap->nodeList[posMax]->distance){
         posMax = right;
     }
     if(posMax!=i){
-        swap(hp->nodeList,i,posMax);
-        minHeapify(posMax,hp);
+        minHeap->position[minHeap->nodeList[posMax]->vertex] = i;
+        minHeap->position[minHeap->nodeList[i]->vertex] = posMax;
+        swap(minHeap->nodeList,i,posMax);
+        minHeapify(posMax);
     }
 }
 void Create_Min_Heap(int nodeListLength){
@@ -334,7 +279,7 @@ void Insert(int i,int distance){
 void decreaseKey(int vert, int dist) {
     int i = minHeap->position[vert];
     minHeap->nodeList[i]->distance = dist;
-    while (i && minHeap->nodeList[i]->distance < minHeap->nodeList[Parent(i)]->distance) {
+    while (i!=0 && minHeap->nodeList[i]->distance < minHeap->nodeList[Parent(i)]->distance) {
         minHeap->position[minHeap->nodeList[i]->vertex] = Parent(i);
         minHeap->position[minHeap->nodeList[Parent(i)]->vertex] = i;
         swap(minHeap->nodeList,i, Parent(i));
@@ -343,25 +288,36 @@ void decreaseKey(int vert, int dist) {
 }
 
 heap_node *extractMin(){
+    int temp2,v2;
+    temp2 = INT_MAX;
     if (minHeap->size<1)
         return NULL;
     heap_node *heapRoot = minHeap->nodeList[0];
     heap_node *heapLeaf = minHeap->nodeList[minHeap->size - 1];
+    for (int i = 0; i < minHeap->size; i++) {
+        if ( temp2 > minHeap->nodeList[i]->distance){
+            temp2 = minHeap->nodeList[i]->distance;
+            v2 = minHeap->nodeList[i]->vertex;
+        }
+    }
     minHeap->nodeList[0] = heapLeaf;
+    if(heapRoot->distance!=temp2 && heapRoot->vertex!=v2){
+        printf("hai cannato \n");
+    }
     minHeap->position[heapLeaf->vertex] = 0;
-    minHeap->position[heapRoot->vertex] = minHeap->size-1;
+    minHeap->position[heapRoot->vertex] = minHeap->size - 1;
     minHeap->size = minHeap->size - 1;
-    minHeapify(0,minHeap);
+    minHeapify(0);
     return heapRoot;
 }
 
 int DijkstraQueue(){
-    int distance[RB_Tree->size];
+    int distance[size];
     int temp;
     int vertexSrc = 0;
     heap_node *heapNode;
-    Create_Min_Heap(RB_Tree->size);
-    for(int i = 0; i < RB_Tree->size; i++){
+    Create_Min_Heap(size);
+    for(int i = 0; i < size; i++){
         distance[i] = INT_MAX;
         Insert(i,distance[i]);
         minHeap->position[i] = i;
@@ -370,7 +326,7 @@ int DijkstraQueue(){
     minHeap->position[vertexSrc] = vertexSrc;
     distance[vertexSrc] = 0;
     decreaseKey(vertexSrc,distance[vertexSrc]);
-    minHeap->size = RB_Tree->size;
+    minHeap->size = size;
     while(minHeap->size != 0){
         heapNode = extractMin();
         temp = heapNode->vertex;
@@ -387,7 +343,7 @@ int DijkstraQueue(){
         free(heapNode);
     }
     int score = 0;
-    for (int i = 0; i < RB_Tree->size; i++) {
+    for (int i = 0; i < size; i++) {
         if (distance[i] != INT_MAX) {
             score = score + distance[i];
         }
@@ -395,74 +351,6 @@ int DijkstraQueue(){
     return score;
 };
 
-void Insert_NodeV1(proximity_list *num, int key) {
-    node *x;
-    x = Searching(key);
-    proximity_list *s, *r;
-    s = x->list;
-    while (s != NULL && num->destinationVertex > s->destinationVertex) {
-        r = s;
-        s = s->next;
-        s->prev = NULL;
-        free(r);
-    }
-    if (s == NULL) {
-        x->list = num;
-        return;
-    }
-    x->list = num;
-    while (num != NULL && num->destinationVertex < s->destinationVertex) {
-        r = num;
-        num = num->next;
-        r->next = s;
-        if (s->prev == NULL) {
-            s->prev = r;
-            r->prev = NULL;
-        } else {
-            s->prev->next = r;
-            r->prev = s->prev;
-            s->prev = r;
-        }
-    }
-    if (num == NULL) {
-        while (s != NULL) {
-            r = s;
-            s = s->next;
-            free(r);
-        }
-        return;
-    }
-    while (num != NULL && s->next != NULL) {
-        if (num->destinationVertex > s->destinationVertex) {
-            r = s;
-            s = s->next;
-            s->prev = r->prev;
-            free(r);
-        } else if (num->destinationVertex == s->destinationVertex) {
-            s->length = num->length;
-            r = num;
-            num = num->next;
-            s = s->next;
-            free(r);
-        } else {
-            r = num;
-            num = num->next;
-            r->next = s;
-            r->prev = s->prev;
-            s->prev->next = r;
-            s->prev = r;
-        }
-    }
-    while (num != NULL) {
-        s->next = num;
-        num->prev = s;
-    }
-    while (s != NULL) {
-        r = s;
-        s = s->next;
-        free(r);
-    }
-}
 void Insert_Node(proximity_list *num,int ind1){
     node *x;
     x = Searching(ind1);
@@ -471,12 +359,11 @@ void Insert_Node(proximity_list *num,int ind1){
     while(prev!=NULL){
         next = prev->next;
         prev->next = NULL;
-        prev->prev = NULL;
         free(prev);
         prev = next;
     }
     x->list = num;
-    RB_Tree->size++;
+    size++;
 }
 void add_score(int score,int ID,int k){
     scoreRanking *s,*r;
@@ -580,11 +467,11 @@ void TopK(int k,int length){
     }
 };
 
-proximity_list *RowAssembler(char* Pointer, int d,int vertex){
+proximity_list *RowAssembler(char* Pointer,int vertex){
     proximity_list *temp,*prev;
     proximity_list *head = NULL;
     prev = NULL;
-    int length;
+    unsigned long int length;
     int number = 0;
     while(strlen(Pointer) != 0){
         length = strtoul(Pointer, &Pointer, 10);
@@ -597,7 +484,6 @@ proximity_list *RowAssembler(char* Pointer, int d,int vertex){
                 prev->next = temp;
             temp->length = length;
             temp->destinationVertex = number;
-            temp->prev = prev;
             temp->next = NULL;
             prev = temp;
         }
@@ -615,15 +501,13 @@ int main() {
     firstPosition = NULL;
     lastPosition = firstPosition;
     root = nil;
-    RB_Tree = malloc(sizeof (tree));
-    RB_Tree->size = 0;
-    RB_Tree->root = root;
-    int size;
+    size = 0;
+    int sizeLine;
     int d,k,rowLength,numOfMatrixProc;
     int index;
     int *i;
     bool isAFunctionActive = false;
-    size = N;
+    sizeLine = N;
     i = malloc(sizeof(int));
     *i = 0;
     d = 0;
@@ -633,7 +517,7 @@ int main() {
     char *Pointer = malloc(N);
     char *SecondPointer = NULL;
     while (1) {
-        if(fgets(Pointer, size, stdin) == NULL)
+        if(fgets(Pointer, sizeLine, stdin) == NULL)
             return 0;
         SecondPointer = Pointer;
         if(d == 0 || k==0){
@@ -642,8 +526,8 @@ int main() {
             if (d == 0){
                 return 0;
             } else {
-                size = (d*10*sizeof(char));
-                Pointer = realloc(Pointer, size);
+                sizeLine= (d*10*sizeof(char));
+                Pointer = realloc(Pointer, sizeLine);
             }
             (*i) = 0;
         }
@@ -654,14 +538,14 @@ int main() {
         } else if(isAFunctionActive && rowLength>0){
             int key = -1 * (rowLength - d);
             if (index == 0) {
-                NodeCreate(key, RowAssembler(SecondPointer, d, key));
+                NodeCreate(key, RowAssembler(SecondPointer, key));
             } else
-                Insert_Node(RowAssembler(SecondPointer, d, key),key);
+                Insert_Node(RowAssembler(SecondPointer, key),key);
             rowLength--;
             if (rowLength == 0){
                 Add_Graph(index,k);
                 numOfMatrixProc++;
-                RB_Tree->size = 0;
+                size = 0;
                 free(minHeap);
                 minHeap = NULL;
                 isAFunctionActive = false;
