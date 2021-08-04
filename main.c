@@ -17,7 +17,6 @@ typedef struct temp1{
     int destinationVertex;
     int length;
     struct temp1 *next;
-    struct temp1 *prev;
 }proximity_list;
 
 typedef struct temp2{
@@ -39,11 +38,10 @@ typedef struct Point{
 node *ArrayBuffer;
 scoreRanking *firstPosition;
 scoreRanking *lastPosition;
+heap_node *reset;
 heap *minHeap;
 int rankLength = 0;
 int StringToNumber(char** Pointer);
-
-
 
 int Parent(int i){
     return (i - 1) / 2;
@@ -56,16 +54,10 @@ int Left(int i){
 int Right(int i){
     return i*2 +2;
 }
-void swap(int i, int max){
-    heap_node **list = minHeap->nodeList;
-    minHeap->position[list[i]->vertex] = max;
-    minHeap->position[list[max]->vertex] = i;
-    int vert= list[max]->vertex;
-    int dist= list[max]->distance;
-    list[max]->vertex = list[i]->vertex;
-    list[max]->distance = list[i]->distance;
-    list[i]->distance = dist;
-    list[i]->vertex = vert;
+void swap(heap_node **list,int i, int max){
+    heap_node* temp = list[max];
+    list[max] = list[i];
+    list[i] = temp;
 }
 void minHeapify(int i){
     int left = Left(i);
@@ -79,26 +71,38 @@ void minHeapify(int i){
         posMax = right;
     }
     if(posMax!=i){
-        swap(i,posMax);
+        minHeap->position[minHeap->nodeList[posMax]->vertex] = i;
+        minHeap->position[minHeap->nodeList[i]->vertex] = posMax;
+        swap(minHeap->nodeList,i,posMax);
         minHeapify(posMax);
     }
 }
-void resetHeap(){
-    minHeap->size = 0;
-}
 
 void Create_Min_Heap(int nodeListLength){
-    minHeap = malloc(sizeof (heap));
-    minHeap->nodeList = malloc(nodeListLength* sizeof(heap_node*));
+    minHeap = malloc(sizeof (heap*));
+    minHeap->nodeList = malloc(nodeListLength * sizeof(heap_node*));
     minHeap->size = 0;
-    minHeap->position = malloc(nodeListLength *sizeof(int));
+    minHeap->position = malloc(nodeListLength * sizeof(int));
+}
+
+void Insert(int index,int i,int distance){
+    if(index==0){
+        minHeap->nodeList[i] = malloc(sizeof (heap_node));
+        if(i==0){
+            reset = minHeap->nodeList[i];
+        }
+    }
+    minHeap->nodeList[i]->vertex = i;
+    minHeap->nodeList[i]->distance = distance;
 }
 
 void decreaseKey(int vert, int dist) {
     int i = minHeap->position[vert];
     minHeap->nodeList[i]->distance = dist;
     while (i!=0 && minHeap->nodeList[i]->distance < minHeap->nodeList[Parent(i)]->distance) {
-        swap(i, Parent(i));
+        minHeap->position[minHeap->nodeList[i]->vertex] = Parent(i);
+        minHeap->position[minHeap->nodeList[Parent(i)]->vertex] = i;
+        swap(minHeap->nodeList,i, Parent(i));
         i = Parent(i);
     }
 }
@@ -106,45 +110,40 @@ void decreaseKey(int vert, int dist) {
 heap_node *extractMin(){
     if (minHeap->size<1)
         return NULL;
-    int vertRoot = minHeap->nodeList[0]->vertex;
-    int distRoot = minHeap->nodeList[0]->distance;
+    heap_node *heapRoot = minHeap->nodeList[0];
     heap_node *heapLeaf = minHeap->nodeList[minHeap->size - 1];
-    minHeap->nodeList[0]->vertex = heapLeaf->vertex;
-    minHeap->nodeList[0]->distance = heapLeaf->distance;
+    minHeap->nodeList[0] = heapLeaf;
     minHeap->position[heapLeaf->vertex] = 0;
-    heapLeaf->distance = distRoot;
-    heapLeaf->vertex = vertRoot;
-    minHeap->position[vertRoot] = minHeap->size - 1;
-    heap_node *heapNode = minHeap->nodeList[minHeap->size - 1];
-    for(int i = 0; i<minHeap->size; i++){
-        if (distRoot > minHeap->nodeList[i]->distance){
-            printf("hai cannato");
-        }
-    }
+    minHeap->position[heapRoot->vertex] = minHeap->size - 1;
     minHeap->size = minHeap->size - 1;
     minHeapify(0);
-    return heapNode;
+    return heapRoot;
 }
 
 int DijkstraQueue(int index){
     int distance[ArrayBuffer->size];
     int temp;
+    int vertexSrc = 0;
     heap_node *heapNode;
-    resetHeap();
+    minHeap->size = 0;
+    heap_node *flag = reset;
     for(int i = 0; i < ArrayBuffer->size; i++){
         distance[i] = INT_MAX;
-        if(index == 0){
-            minHeap->nodeList[i] = malloc(sizeof (heap_node));
+        if(index != 0){
+            minHeap->nodeList[i] = flag;
+            flag = flag + 4;
         }
-        minHeap->nodeList[i]->vertex = i;
-        minHeap->nodeList[i]->distance = distance[i];
+        Insert(index,i,distance[i]);
         minHeap->position[i] = i;
     }
-    distance[0] = 0;
+    distance[vertexSrc] = 0;
     minHeap->size = ArrayBuffer->size;
     while(minHeap->size != 0){
         heapNode = extractMin();
         temp = heapNode->vertex;
+        if(temp == 0){
+            reset = heapNode;
+        }
         proximity_list *list = ArrayBuffer->list[temp];
         int vTemp;
         while(list != NULL){
@@ -165,76 +164,6 @@ int DijkstraQueue(int index){
     return score;
 };
 
-void Insert_NodeV1(proximity_list *num, int key) {
-    proximity_list *x;
-    x = ArrayBuffer->list[key];
-    proximity_list *s, *r;
-    s = x;
-    while (s != NULL && num->destinationVertex > s->destinationVertex) {
-        r = s;
-        s = s->next;
-        s->prev = NULL;
-        free(r);
-    }
-    if (s == NULL) {
-        x = num;
-        return;
-    }
-    x = num;
-    while (num != NULL && num->destinationVertex < s->destinationVertex) {
-        r = num;
-        num = num->next;
-        r->next = s;
-        if (s->prev == NULL) {
-            s->prev = r;
-            r->prev = NULL;
-        } else {
-            s->prev->next = r;
-            r->prev = s->prev;
-            s->prev = r;
-        }
-    }
-    if (num == NULL) {
-        while (s != NULL) {
-            r = s;
-            s = s->next;
-            free(r);
-        }
-        return;
-    }
-    while (num != NULL && s->next != NULL) {
-        if (num->destinationVertex > s->destinationVertex) {
-            r = s;
-            s = s->next;
-            s->prev = r->prev;
-            free(r);
-        } else if (num->destinationVertex == s->destinationVertex) {
-            s->length = num->length;
-            r = num;
-            num = num->next;
-            s = s->next;
-            free(r);
-        } else {
-            r = num;
-            num = num->next;
-            r->next = s;
-            r->prev = s->prev;
-            s->prev->next = r;
-            s->prev = r;
-        }
-    }
-    while (num != NULL) {
-        s->next = num;
-        num->prev = s;
-        num = num->next;
-    }
-    while (s != NULL) {
-        r = s;
-        s = s->next;
-        free(r);
-    }
-}
-
 void Insert_Node(proximity_list *num,int ind1){
     proximity_list *prev,*next;
     prev = ArrayBuffer->list[ind1];
@@ -245,12 +174,11 @@ void Insert_Node(proximity_list *num,int ind1){
         prev = next;
     }
     ArrayBuffer->list[ind1] = num;
-    ArrayBuffer->size++;
 }
 void add_score(int score,int ID,int k){
     scoreRanking *s,*r;
     if(firstPosition == NULL){
-        firstPosition = malloc(sizeof (scoreRanking));
+        firstPosition = malloc(sizeof (scoreRanking*));
         firstPosition->ID = ID;
         firstPosition->pathLength = score;
         firstPosition->next = NULL;
@@ -273,7 +201,6 @@ void add_score(int score,int ID,int k){
             lastPosition = r;
         } else
             rankLength++;
-        return;
     } else if(lastPosition->pathLength <= score){
         if(k==rankLength){
             return;
@@ -338,12 +265,6 @@ void TopK(int k,int length){
     }
 };
 
-void CreateNode(int size){
-    ArrayBuffer = malloc(sizeof(node));
-    ArrayBuffer->size = 0;
-    ArrayBuffer->list = malloc(size*sizeof(proximity_list));
-}
-
 proximity_list *RowAssembler(char* Pointer,int vertex){
     proximity_list *temp,*prev;
     proximity_list *head = NULL;
@@ -383,13 +304,17 @@ int StringToNumber(char **Pointer){
 }
 
 int main() {
+    ArrayBuffer = malloc(sizeof(node*));
     firstPosition = NULL;
     lastPosition = firstPosition;
     int sizeLine;
     int d,k,rowLength,numOfMatrixProc;
     int index;
+    int *i;
     bool isAFunctionActive = false;
     sizeLine = N;
+    i = malloc(sizeof(int));
+    *i = 0;
     d = 0;
     k = 0;
     numOfMatrixProc = 0;
@@ -407,12 +332,14 @@ int main() {
                 return 0;
             } else {
                 sizeLine= (d*10);
-                CreateNode(d);
-                Create_Min_Heap(d);
+                ArrayBuffer->size = d;
+                ArrayBuffer->list = malloc(d*sizeof(proximity_list*));
+                Create_Min_Heap(ArrayBuffer->size);
                 Pointer = realloc(Pointer, sizeLine);
             }
+            (*i) = 0;
         }
-        if (!isAFunctionActive && Pointer[0]==65){
+        if (!isAFunctionActive && Pointer[*i]==65){
             isAFunctionActive = true;
             rowLength = d;
             index++;
@@ -423,10 +350,9 @@ int main() {
             if (rowLength == 0){
                 Add_Graph(index,k);
                 numOfMatrixProc++;
-                ArrayBuffer->size = 0;
                 isAFunctionActive = false;
             }
-        } else if (Pointer[0] == 84){
+        } else if (Pointer[*i] == 84){
             TopK(k,numOfMatrixProc);
             printf("\n");
         }
