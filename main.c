@@ -267,7 +267,7 @@ void TopK(int k,int length){
 
 void Insert_List(char *Pointer, int vertex) {
     proximity_list *head = ArrayBuffer->list[vertex];
-    proximity_list *prev, *next, *temp;
+    proximity_list *prev , *next, *temp;
     prev = NULL;
     next = NULL;
     bool flag = 0;
@@ -295,18 +295,46 @@ void Insert_List(char *Pointer, int vertex) {
         }
         ArrayBuffer->list[vertex] = head;
     } else {
-        while (head!=NULL){
+        proximity_list *current = head;
+        while (current!=NULL){
             length = StringToNumber(&Pointer);
             if (length != 0 && vertex != number && number != 0) {
                 flag = 1;
+                current->length = length;
+                current->destinationVertex = number;
+                prev = current;
+                current = current->next;
             }
             number++;
-            if(strlen(Pointer)!=0)
+            if(strlen(Pointer) == 1){
+                if(prev!=NULL)
+                    prev->next = NULL;
+                while (current!=NULL){
+                    next = current->next;
+                    free(current);
+                    current = NULL;
+                    current = next;
+                }
+                if(!flag){
+                    head = NULL;
+                }
+                ArrayBuffer->list[vertex] = head;
                 return;
+            }
         }
-        if(!flag){
-            head = NULL;
+        while(strlen(Pointer)!=0){
+            length = StringToNumber(&Pointer);
+            if (length != 0 && vertex != number && number != 0) {
+                current = malloc(sizeof(proximity_list));
+                prev->next = current;
+                current->length = length;
+                current->destinationVertex = number;
+                current->next = NULL;
+                prev = current;
+            }
+            number++;
         }
+        ArrayBuffer->list[vertex] = head;
     }
 }
 
