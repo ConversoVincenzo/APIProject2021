@@ -164,16 +164,16 @@ int DijkstraQueue(int index){
     return score;
 };
 
-void Insert_Node(proximity_list *num,int ind1){
+void Insert_Node(proximity_list *num,int key){
     proximity_list *prev,*next;
-    prev = ArrayBuffer->list[ind1];
+    prev = ArrayBuffer->list[key];
     while(prev!=NULL){
         next = prev->next;
         prev->next = NULL;
         free(prev);
         prev = next;
     }
-    ArrayBuffer->list[ind1] = num;
+    ArrayBuffer->list[key] = num;
 }
 void add_score(int score,int ID,int k){
     scoreRanking *s,*r;
@@ -265,28 +265,49 @@ void TopK(int k,int length){
     }
 };
 
-proximity_list *RowAssembler(char* Pointer,int vertex){
-    proximity_list *temp,*prev;
-    proximity_list *head = NULL;
+void Insert_List(char *Pointer, int vertex) {
+    proximity_list *head = ArrayBuffer->list[vertex];
+    proximity_list *prev, *next, *temp;
     prev = NULL;
+    next = NULL;
+    bool flag = 0;
     int length;
     int number = 0;
-    while(strlen(Pointer) != 0){
-        length = StringToNumber(&Pointer);
-        if (length != 0 && vertex != number && number != 0) {
-            temp = malloc(sizeof(proximity_list));
-            if(prev == NULL){
-                head = temp;
-            } else
-                prev->next = temp;
-            temp->length = length;
-            temp->destinationVertex = number;
-            temp->next = NULL;
-            prev = temp;
+    if (head == NULL) {
+        while(strlen(Pointer) != 0){
+            length = StringToNumber(&Pointer);
+            if (length != 0 && vertex != number && number != 0) {
+                flag = 1;
+                temp = malloc(sizeof(proximity_list));
+                if(prev == NULL){
+                    head = temp;
+                } else
+                    prev->next = temp;
+                temp->length = length;
+                temp->destinationVertex = number;
+                temp->next = NULL;
+                prev = temp;
+            }
+            number++;
         }
-        number++;
+        if(!flag){
+            head = NULL;
+        }
+        ArrayBuffer->list[vertex] = head;
+    } else {
+        while (head!=NULL){
+            length = StringToNumber(&Pointer);
+            if (length != 0 && vertex != number && number != 0) {
+                flag = 1;
+            }
+            number++;
+            if(strlen(Pointer)!=0)
+                return;
+        }
+        if(!flag){
+            head = NULL;
+        }
     }
-    return head;
 }
 
 int StringToNumber(char **Pointer){
@@ -345,7 +366,7 @@ int main() {
             index++;
         } else if(isAFunctionActive && rowLength>0){
             int key = -1 * (rowLength - d);
-            Insert_Node(RowAssembler(SecondPointer, key),key);
+            Insert_List(SecondPointer, key);
             rowLength--;
             if (rowLength == 0){
                 Add_Graph(index,k);
