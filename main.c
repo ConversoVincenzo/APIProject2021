@@ -266,76 +266,34 @@ void TopK(int k,int length){
 };
 
 void Insert_List(char *Pointer, int vertex) {
-    proximity_list *head = ArrayBuffer->list[vertex];
-    proximity_list *prev , *next, *temp;
+    proximity_list *head = NULL;
+    proximity_list *prev, *next= ArrayBuffer->list[vertex], *temp;
+    proximity_list *temp1;
     prev = NULL;
-    next = NULL;
-    bool flag = 0;
     int length;
     int number = 0;
-    if (head == NULL) {
-        while(strlen(Pointer) != 0){
-            length = StringToNumber(&Pointer);
-            if (length != 0 && vertex != number && number != 0) {
-                flag = 1;
-                temp = malloc(sizeof(proximity_list));
-                if(prev == NULL){
-                    head = temp;
-                } else
-                    prev->next = temp;
-                temp->length = length;
-                temp->destinationVertex = number;
-                temp->next = NULL;
-                prev = temp;
-            }
-            number++;
+    while (strlen(Pointer) != 0) {
+        length = StringToNumber(&Pointer);
+        if (length != 0 && vertex != number && number != 0) {
+            temp = malloc(sizeof(proximity_list));
+            if (prev == NULL) {
+                head = temp;
+            } else
+                prev->next = temp;
+            temp->length = length;
+            temp->destinationVertex = number;
+            temp->next = NULL;
+            prev = temp;
         }
-        if(!flag){
-            head = NULL;
+        if(next!=NULL){
+            temp1 = next->next;
+            free(next);
+            next = NULL;
+            next = temp1;
         }
-        ArrayBuffer->list[vertex] = head;
-    } else {
-        proximity_list *current = head;
-        while (current!=NULL){
-            length = StringToNumber(&Pointer);
-            if (length != 0 && vertex != number && number != 0) {
-                flag = 1;
-                current->length = length;
-                current->destinationVertex = number;
-                prev = current;
-                current = current->next;
-            }
-            number++;
-            if(strlen(Pointer) == 1){
-                if(prev!=NULL)
-                    prev->next = NULL;
-                while (current!=NULL){
-                    next = current->next;
-                    free(current);
-                    current = NULL;
-                    current = next;
-                }
-                if(!flag){
-                    head = NULL;
-                }
-                ArrayBuffer->list[vertex] = head;
-                return;
-            }
-        }
-        while(strlen(Pointer)!=0){
-            length = StringToNumber(&Pointer);
-            if (length != 0 && vertex != number && number != 0) {
-                current = malloc(sizeof(proximity_list));
-                prev->next = current;
-                current->length = length;
-                current->destinationVertex = number;
-                current->next = NULL;
-                prev = current;
-            }
-            number++;
-        }
-        ArrayBuffer->list[vertex] = head;
+        number++;
     }
+    ArrayBuffer->list[vertex] = head;
 }
 
 int StringToNumber(char **Pointer){
