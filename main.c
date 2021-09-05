@@ -120,11 +120,7 @@ heap_node *extractMin(){
     return heapRoot;
 }
 
-int DijkstraQueue(int index){
-    int distance[ArrayBuffer->size];
-    int temp;
-    int vertexSrc = 0;
-    heap_node *heapNode;
+void ResetHeap(int index, int *distance){
     minHeap->size = 0;
     heap_node *flag = reset;
     for(int i = 0; i < ArrayBuffer->size; i++){
@@ -136,8 +132,15 @@ int DijkstraQueue(int index){
         Insert(index,i,distance[i]);
         minHeap->position[i] = i;
     }
-    distance[vertexSrc] = 0;
+    distance[0] = 0;
     minHeap->size = ArrayBuffer->size;
+}
+
+int DijkstraQueue(int index){
+    int temp;
+    heap_node *heapNode;
+    int distance[ArrayBuffer->size];
+    ResetHeap(index,distance);
     while(minHeap->size != 0){
         heapNode = extractMin();
         temp = heapNode->vertex;
@@ -148,7 +151,7 @@ int DijkstraQueue(int index){
         int vTemp;
         while(list != NULL){
             vTemp = list->destinationVertex;
-            if (minHeap->position[vTemp] < minHeap->size && distance[temp] < INT_MAX && list->length + distance[temp] < distance[vTemp]){
+            if (distance[temp] < INT_MAX && list->length + distance[temp] < distance[vTemp]){
                 distance[vTemp] = distance[temp] + list->length;
                 decreaseKey(vTemp,distance[vTemp]);
             }
@@ -164,18 +167,8 @@ int DijkstraQueue(int index){
     return score;
 };
 
-void Insert_Node(proximity_list *num,int key){
-    proximity_list *prev,*next;
-    prev = ArrayBuffer->list[key];
-    while(prev!=NULL){
-        next = prev->next;
-        prev->next = NULL;
-        free(prev);
-        prev = next;
-    }
-    ArrayBuffer->list[key] = num;
-}
-void add_score(int score,int ID,int k){
+void Add_Graph(int ID,int k){
+    int score = DijkstraQueue(ID);
     scoreRanking *s,*r;
     if(firstPosition == NULL){
         firstPosition = malloc(sizeof (scoreRanking*));
@@ -238,10 +231,6 @@ void add_score(int score,int ID,int k){
             s = s->next;
         }
     }
-}
-void Add_Graph(int index,int k){
-    int score = DijkstraQueue(index);
-    add_score(score,index,k);
 };
 
 /**
